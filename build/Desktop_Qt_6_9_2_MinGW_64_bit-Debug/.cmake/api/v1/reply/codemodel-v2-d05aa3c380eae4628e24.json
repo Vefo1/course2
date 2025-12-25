@@ -1,0 +1,79 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-29c562d74dce54fb7f76.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "StockExchange",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "StockExchange::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-StockExchange-Debug-40785e79060d4ebe8c5e.json",
+					"name" : "StockExchange",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "StockExchange_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-StockExchange_autogen-Debug-caa539ff682338cb5762.json",
+					"name" : "StockExchange_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "StockExchange_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-StockExchange_autogen_timestamp_deps-Debug-0c467fca331f9c29d4af.json",
+					"name" : "StockExchange_autogen_timestamp_deps",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/vefoo/projects/QT/StockExchange/build/Desktop_Qt_6_9_2_MinGW_64_bit-Debug",
+		"source" : "C:/Users/vefoo/projects/QT/StockExchange"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}
