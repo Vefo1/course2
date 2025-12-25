@@ -9,7 +9,7 @@ public:
     int id;
     QString name;
     double cashBalance;
-    // Тикер -> Элемент портфеля
+
     QMap<QString, PortfolioItem> portfolio;
 
     Trader(int _id, QString _name, double _balance)

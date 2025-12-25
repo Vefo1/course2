@@ -50,11 +50,16 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         "column",
         "onBuyClicked",
         "onSellClicked",
+        "onUndoClicked",
         "updateMarketData",
         "ticker",
         "updatePortfolio",
         "traderId",
-        "updateHistory"
+        "updateHistory",
+        "onSimulationModeChanged",
+        "enable",
+        "onSimulationTick",
+        "onHistoryFilterChanged"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -74,16 +79,26 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         QtMocHelpers::SlotData<void()>(9, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'onSellClicked'
         QtMocHelpers::SlotData<void()>(10, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onUndoClicked'
+        QtMocHelpers::SlotData<void()>(11, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'updateMarketData'
-        QtMocHelpers::SlotData<void(QString)>(11, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 12 },
+        QtMocHelpers::SlotData<void(QString)>(12, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 13 },
         }}),
         // Slot 'updatePortfolio'
-        QtMocHelpers::SlotData<void(int)>(13, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 14 },
+        QtMocHelpers::SlotData<void(int)>(14, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 15 },
         }}),
         // Slot 'updateHistory'
-        QtMocHelpers::SlotData<void()>(15, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(16, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onSimulationModeChanged'
+        QtMocHelpers::SlotData<void(bool)>(17, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Bool, 18 },
+        }}),
+        // Slot 'onSimulationTick'
+        QtMocHelpers::SlotData<void()>(19, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onHistoryFilterChanged'
+        QtMocHelpers::SlotData<void()>(20, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -113,9 +128,13 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 3: _t->onAssetTableClicked((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<int>>(_a[2]))); break;
         case 4: _t->onBuyClicked(); break;
         case 5: _t->onSellClicked(); break;
-        case 6: _t->updateMarketData((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 7: _t->updatePortfolio((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 8: _t->updateHistory(); break;
+        case 6: _t->onUndoClicked(); break;
+        case 7: _t->updateMarketData((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 8: _t->updatePortfolio((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 9: _t->updateHistory(); break;
+        case 10: _t->onSimulationModeChanged((*reinterpret_cast< std::add_pointer_t<bool>>(_a[1]))); break;
+        case 11: _t->onSimulationTick(); break;
+        case 12: _t->onHistoryFilterChanged(); break;
         default: ;
         }
     }
@@ -140,14 +159,14 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 9)
+        if (_id < 13)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 9;
+        _id -= 13;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 9)
+        if (_id < 13)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 9;
+        _id -= 13;
     }
     return _id;
 }

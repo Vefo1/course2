@@ -27,6 +27,22 @@ void MatchingEngine::addAsset(QString ticker, QString name, double startPrice) {
     assets.insert(ticker, a);
 }
 
+// НОВЫЙ МЕТОД: Добавляем акции трейдеру "из воздуха" (для инициализации)
+void MatchingEngine::addSharesToTrader(int traderId, QString ticker, int quantity, double avgPrice) {
+    Trader* t = traders.value(traderId);
+    if (!t) return;
+
+    PortfolioItem& item = t->portfolio[ticker];
+    item.assetTicker = ticker;
+    // Пересчет средней цены, если акции уже были (хотя при старте их обычно 0)
+    double totalCost = item.averageBuyPrice * item.quantity + avgPrice * quantity;
+    item.quantity += quantity;
+    if (item.quantity > 0)
+        item.averageBuyPrice = totalCost / item.quantity;
+
+    emit portfolioUpdated(traderId);
+}
+
 QList<Trader*> MatchingEngine::getAllTraders() { return traders.values(); }
 QList<Asset> MatchingEngine::getAllAssets() { return assets.values(); }
 Trader* MatchingEngine::getTrader(int id) { return traders.value(id, nullptr); }
@@ -42,21 +58,109 @@ QList<Order> MatchingEngine::getOrderBook(QString ticker) {
     return result;
 }
 
-void MatchingEngine::processNewOrder(Order newOrder) {
-    newOrder.status = OrderStatus::ACTIVE;
-    Trader* t = traders.value(newOrder.traderId);
-    if (!t) return;
+bool MatchingEngine::isIPOAvailable(QString ticker) {
+    // Пробегаем по всем трейдерам и ищем, есть ли у кого-то этот актив
+    for(auto* t : traders) {
+        if(t->portfolio.contains(ticker)) {
+            if(t->portfolio[ticker].quantity > 0) {
+                return false; // Кто-то уже владеет акциями, IPO закончилось, торгуем на вторичке
+            }
+        }
+    }
+    return true; // Ни у кого нет акций -> это IPO
+}
 
-    // Списываем/блокируем средства или акции (упрощенно - только проверка)
-    // В реальной бирже здесь нужно заморозить средства (hold)
+// ОСНОВНАЯ ЛОГИКА ТОРГОВ (С ПРОВЕРКАМИ)
+bool MatchingEngine::processNewOrder(Order newOrder) {
+    Trader* t = traders.value(newOrder.traderId);
+    if (!t) return false;
+
+    // --- ПРОВЕРКА 1: Проверка средств/акций ---
+    if (newOrder.type == OrderType::BUY) {
+        double requiredCash = newOrder.price * newOrder.quantity;
+        if (t->cashBalance < requiredCash) {
+            return false; // Недостаточно денег
+        }
+    } else { // SELL
+        int availableQty = t->portfolio.value(newOrder.assetTicker).quantity;
+        if (availableQty < newOrder.quantity) {
+            return false; // Недостаточно акций
+        }
+    }
+
+    // --- ПРОВЕРКА 2: Запрет встречных заявок (чтобы не торговать сам с собой) ---
+    for (const auto& o : activeOrders) {
+        if (o.traderId == newOrder.traderId &&
+            o.assetTicker == newOrder.assetTicker &&
+            o.status == OrderStatus::ACTIVE)
+        {
+            // Если у трейдера уже есть заявка противоположного типа
+            if (o.type != newOrder.type) {
+                return false; // Нельзя ставить BUY, если уже стоит SELL (и наоборот)
+            }
+        }
+    }
+
+    // Если это ПОКУПКА и никто не владеет акциями (IPO)
+    if (newOrder.type == OrderType::BUY && isIPOAvailable(newOrder.assetTicker)) {
+        Asset& asset = assets[newOrder.assetTicker];
+
+        // Проверяем цену (не ниже стартовой/текущей)
+        if (newOrder.price >= asset.currentPrice) {
+            // Исполняем сразу "от лица компании"
+
+            Trade trade;
+            trade.id = tradeIdCounter++;
+            trade.assetTicker = newOrder.assetTicker;
+            trade.price = newOrder.price; // По цене заявки
+            trade.quantity = newOrder.quantity;
+            trade.timestamp = QDateTime::currentDateTime();
+            trade.buyOrderId = newOrder.id;
+            trade.sellOrderId = -1; // -1 означает "Система/Эмитент"
+
+            trade.buyerId = newOrder.traderId;
+            trade.sellerId = -1;    // Продавец - Система
+
+            tradeHistory.append(trade);
+            emit globalHistoryUpdated();
+
+            // Обновляем цену
+            asset.currentPrice = trade.price;
+            asset.priceHistory.append(trade.price);
+
+            // Списываем деньги у покупателя и даем акции
+            t->cashBalance -= trade.price * trade.quantity;
+            PortfolioItem& item = t->portfolio[newOrder.assetTicker];
+            item.assetTicker = newOrder.assetTicker;
+            // Расчет средней
+            double totalCost = item.averageBuyPrice * item.quantity + trade.price * trade.quantity;
+            item.quantity += trade.quantity;
+            item.averageBuyPrice = totalCost / item.quantity;
+
+            emit portfolioUpdated(t->id);
+            emit tradeExecuted(trade.assetTicker, trade.price, trade.quantity);
+            emit marketUpdate(newOrder.assetTicker);
+
+            return true; // Заявка полностью исполнена
+        }
+    }
+
+    // Если проверки пройдены, начинаем сведение
+    newOrder.status = OrderStatus::ACTIVE;
 
     QList<Order> counterOrders;
     for (const auto& o : activeOrders) {
-        if (o.assetTicker == newOrder.assetTicker && o.type != newOrder.type && o.status == OrderStatus::ACTIVE) {
+        if (o.assetTicker == newOrder.assetTicker &&
+            o.type != newOrder.type &&
+            o.status == OrderStatus::ACTIVE)
+        {
+            // Важно: Пропускаем свои же заявки (на случай если проверка выше пропущена)
+            if (o.traderId == newOrder.traderId) continue;
             counterOrders.append(o);
         }
     }
 
+    // Сортировка (Покупатели хотят дешевле, Продавцы хотят дороже)
     std::sort(counterOrders.begin(), counterOrders.end(), [&](const Order& a, const Order& b){
         if (newOrder.type == OrderType::BUY) return a.price < b.price;
         else return a.price > b.price;
@@ -74,7 +178,7 @@ void MatchingEngine::processNewOrder(Order newOrder) {
 
             newOrder.quantity -= tradeQty;
 
-            // Обновляем встречную заявку в основном списке
+            // Обновляем встречную заявку
             for(int i=0; i<activeOrders.size(); ++i) {
                 if(activeOrders[i].id == co.id) {
                     activeOrders[i].quantity -= tradeQty;
@@ -83,6 +187,7 @@ void MatchingEngine::processNewOrder(Order newOrder) {
                 }
             }
 
+            // Создаем сделку
             Trade trade;
             trade.id = tradeIdCounter++;
             trade.assetTicker = newOrder.assetTicker;
@@ -91,16 +196,18 @@ void MatchingEngine::processNewOrder(Order newOrder) {
             trade.timestamp = QDateTime::currentDateTime();
             trade.buyOrderId = (newOrder.type == OrderType::BUY) ? newOrder.id : co.id;
             trade.sellOrderId = (newOrder.type == OrderType::SELL) ? newOrder.id : co.id;
-            tradeHistory.append(trade);
-            emit globalHistoryUpdated(); // Уведомляем вкладку истории
+            trade.buyerId = (newOrder.type == OrderType::BUY) ? newOrder.traderId : co.traderId;
+            trade.sellerId = (newOrder.type == OrderType::SELL) ? newOrder.traderId : co.traderId;
 
-            // Обновляем цену актива
+            tradeHistory.append(trade);
+            emit globalHistoryUpdated();
+
             assets[trade.assetTicker].currentPrice = tradePrice;
             assets[trade.assetTicker].priceHistory.append(tradePrice);
 
-            // Обновляем балансы трейдеров
-            Trader* buyer = traders.value(trade.buyOrderId);
-            Trader* seller = traders.value(trade.sellOrderId);
+            // Обновляем портфели участников
+            Trader* buyer = traders.value(trade.buyerId);
+            Trader* seller = traders.value(trade.sellerId);
 
             if(buyer && seller) {
                 buyer->cashBalance -= tradePrice * tradeQty;
@@ -113,7 +220,6 @@ void MatchingEngine::processNewOrder(Order newOrder) {
                 seller->cashBalance += tradePrice * tradeQty;
                 PortfolioItem& itemS = seller->portfolio[trade.assetTicker];
                 itemS.quantity -= tradeQty;
-                // Если < 0, значит ошибка логики, но пока оставим так
 
                 emit portfolioUpdated(buyer->id);
                 emit portfolioUpdated(seller->id);
@@ -122,6 +228,7 @@ void MatchingEngine::processNewOrder(Order newOrder) {
         }
     }
 
+    // Если заявка не исполнилась полностью — добавляем остаток в стакан
     if (newOrder.quantity > 0) {
         activeOrders.append(newOrder);
     } else {
@@ -129,4 +236,17 @@ void MatchingEngine::processNewOrder(Order newOrder) {
     }
 
     emit marketUpdate(newOrder.assetTicker);
+    return true; // Успех
+}
+
+void MatchingEngine::cancelOrder(int orderId) {
+    for(int i = 0; i < activeOrders.size(); ++i) {
+        if(activeOrders[i].id == orderId) {
+            activeOrders[i].status = OrderStatus::CANCELED;
+            QString ticker = activeOrders[i].assetTicker;
+            activeOrders.removeAt(i);
+            emit marketUpdate(ticker);
+            return;
+        }
+    }
 }

@@ -3,10 +3,26 @@
 
 TradingServiceFacade::TradingServiceFacade() {}
 
-void TradingServiceFacade::placeOrder(int traderId, QString ticker, OrderType type, double price, int quantity) {
-    // ИСПРАВЛЕНИЕ: Передаем 5 аргументов (без ID), так как ID генерируется внутри фабрики
+int TradingServiceFacade::placeOrder(int traderId, QString ticker, OrderType type, double price, int quantity) {
     Order o = OrderFactory::createOrder(traderId, ticker, type, price, quantity);
-    MatchingEngine::getInstance()->processNewOrder(o);
+
+    // ВАЖНО: Мы сохраняем результат (true/false)
+    bool success = MatchingEngine::getInstance()->processNewOrder(o);
+
+    if (success) {
+        return o.id; // Успех -> возвращаем ID
+    } else {
+        return -1;   // Ошибка -> возвращаем -1
+    }
+}
+
+// Реализация нового метода
+void TradingServiceFacade::addSharesToTrader(int traderId, QString ticker, int quantity, double avgPrice) {
+    MatchingEngine::getInstance()->addSharesToTrader(traderId, ticker, quantity, avgPrice);
+}
+
+void TradingServiceFacade::cancelOrder(int orderId) {
+    MatchingEngine::getInstance()->cancelOrder(orderId);
 }
 
 void TradingServiceFacade::createTrader(QString name, double balance) {
@@ -41,4 +57,9 @@ double TradingServiceFacade::getTraderBalance(int traderId) {
 QList<PortfolioItem> TradingServiceFacade::getTraderPortfolio(int traderId) {
     Trader* t = MatchingEngine::getInstance()->getTrader(traderId);
     return t ? t->portfolio.values() : QList<PortfolioItem>();
+}
+
+QString TradingServiceFacade::getTraderName(int id) {
+    Trader* t = MatchingEngine::getInstance()->getTrader(id);
+    return t ? t->name : "System";
 }

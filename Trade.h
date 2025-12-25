@@ -7,6 +7,8 @@ struct Trade {
     int id;
     int buyOrderId;
     int sellOrderId;
+    int buyerId;
+    int sellerId;
     QString assetTicker;
     double price;
     int quantity;

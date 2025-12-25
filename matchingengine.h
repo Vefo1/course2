@@ -13,7 +13,7 @@ class MatchingEngine : public QObject {
     Q_OBJECT
 private:
     static MatchingEngine* instance;
-    MatchingEngine(); // Private Constructor
+    MatchingEngine();
 
     QMap<int, Trader*> traders;
     QMap<QString, Asset> assets;
@@ -23,14 +23,17 @@ private:
     int orderIdCounter;
     int tradeIdCounter;
 
+    bool isIPOAvailable(QString ticker);
+
 public:
     static MatchingEngine* getInstance();
 
-    // Методы управления данными
     void addTrader(QString name, double balance);
     void addAsset(QString ticker, QString name, double startPrice);
 
-    // Getters
+    // НОВЫЙ МЕТОД: Раздача акций при старте
+    void addSharesToTrader(int traderId, QString ticker, int quantity, double avgPrice);
+
     QList<Trader*> getAllTraders();
     QList<Asset> getAllAssets();
     Trader* getTrader(int id);
@@ -38,14 +41,15 @@ public:
     QList<Order> getOrderBook(QString ticker);
     QList<Trade> getTradeHistory();
 
-    // Core Logic
-    void processNewOrder(Order order);
+    // ИЗМЕНЕНИЕ: Возвращает bool (успех/неудача)
+    bool processNewOrder(Order order);
+    void cancelOrder(int orderId);
 
 signals:
     void marketUpdate(QString ticker);
     void tradeExecuted(QString ticker, double price, int qty);
     void portfolioUpdated(int traderId);
-    void globalHistoryUpdated(); // Сигнал для вкладки "История"
+    void globalHistoryUpdated();
 };
 
 #endif // MATCHINGENGINE_H
