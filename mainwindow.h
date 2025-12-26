@@ -66,11 +66,10 @@ private:
     QLabel* balanceLabel;
 
     QTimer* simulationTimer;
-    int simulationSpeedFps = 5;
+    int simulationSpeedFps;
     int simulationIntervalMs;
 
-    const double ARBITRAGE_MARGIN = 0.05;
-    const double SPREAD_THRESHOLD = 0.05;
+    const double ARBITRAGE_MARGIN = 0.03;
 
     QAction* adminActionTrader;
     QAction* adminActionAsset;

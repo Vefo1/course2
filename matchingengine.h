@@ -31,7 +31,6 @@ public:
     void addTrader(QString name, double balance);
     void addAsset(QString ticker, QString name, double startPrice);
 
-    // НОВЫЙ МЕТОД: Раздача акций при старте
     void addSharesToTrader(int traderId, QString ticker, int quantity, double avgPrice);
 
     QList<Trader*> getAllTraders();
@@ -41,7 +40,6 @@ public:
     QList<Order> getOrderBook(QString ticker);
     QList<Trade> getTradeHistory();
 
-    // ИЗМЕНЕНИЕ: Возвращает bool (успех/неудача)
     bool processNewOrder(Order order);
     void cancelOrder(int orderId);
 

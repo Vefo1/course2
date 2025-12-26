@@ -11,8 +11,8 @@
 #include <QTimer>
 #include <QRandomGenerator>
 #include <QActionGroup>
-#include <random>     // Для std::shuffle
-#include <algorithm>  // Для std::shuffle
+#include <random>
+#include <algorithm>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     facade = new TradingServiceFacade();
@@ -197,7 +197,6 @@ void MainWindow::setupPortfolioTab() {
     tabs->addTab(portfolioTable, "Портфель");
 }
 
-// --- ИЗМЕНЕННАЯ ФУНКЦИЯ НАСТРОЙКИ ИСТОРИИ (СОРТИРОВКА + ФИЛЬТР) ---
 void MainWindow::setupHistoryTab() {
     QWidget* historyWidget = new QWidget();
     QVBoxLayout* layout = new QVBoxLayout(historyWidget);
@@ -225,7 +224,6 @@ void MainWindow::setupHistoryTab() {
     historyTable->setHorizontalHeaderLabels({"Время", "Тикер", "Цена", "Кол-во", "Сумма", "Покупатель", "Продавец"});
     historyTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
-    // ВКЛЮЧАЕМ СОРТИРОВКУ (Клик по заголовку)
     historyTable->setSortingEnabled(true);
 
     layout->addWidget(historyTable);
@@ -308,7 +306,6 @@ void MainWindow::refreshOrderBook(QString ticker) {
         int row = orderBookTable->rowCount();
         orderBookTable->insertRow(row);
 
-        // Используем Data(Qt::DisplayRole), чтобы сортировка (если включена) работала корректно
         QTableWidgetItem* priceItem = new QTableWidgetItem();
         priceItem->setData(Qt::DisplayRole, o.price);
         orderBookTable->setItem(row, 0, priceItem);
@@ -413,44 +410,50 @@ void MainWindow::updatePortfolio(int traderId) {
     }
 }
 
-// --- ОБНОВЛЕНИЕ ИСТОРИИ ---
 void MainWindow::updateHistory() {
     auto history = MatchingEngine::getInstance()->getTradeHistory();
+    int totalTrades = history.size();
+    int currentRows = historyTable->rowCount();
 
-    // ВАЖНО: Отключаем сортировку перед заполнением, иначе будет тормозить и прыгать
+    if (totalTrades == currentRows) return;
+
+    // Отключаем сортировку, иначе insertRow будет тормозить и прыгать
+    bool wasSortingEnabled = historyTable->isSortingEnabled();
     historyTable->setSortingEnabled(false);
 
-    historyTable->setRowCount(0);
-    for(int i = history.size() - 1; i >= 0; --i) {
+    for (int i = currentRows; i < totalTrades; ++i) {
         const auto& t = history[i];
-        int row = historyTable->rowCount();
-        historyTable->insertRow(row);
 
-        // Используем setData для правильной сортировки чисел
-        historyTable->setItem(row, 0, new QTableWidgetItem(t.timestamp.toString("HH:mm:ss")));
-        historyTable->setItem(row, 1, new QTableWidgetItem(t.assetTicker));
+        // Вставляем новую строку всегда на самый верх
+        historyTable->insertRow(0);
+
+        historyTable->setItem(0, 0, new QTableWidgetItem(t.timestamp.toString("HH:mm:ss")));
+        historyTable->setItem(0, 1, new QTableWidgetItem(t.assetTicker));
 
         QTableWidgetItem* priceItem = new QTableWidgetItem();
         priceItem->setData(Qt::DisplayRole, t.price);
-        historyTable->setItem(row, 2, priceItem);
+        historyTable->setItem(0, 2, priceItem);
 
         QTableWidgetItem* qtyItem = new QTableWidgetItem();
         qtyItem->setData(Qt::DisplayRole, t.quantity);
-        historyTable->setItem(row, 3, qtyItem);
+        historyTable->setItem(0, 3, qtyItem);
 
         QTableWidgetItem* sumItem = new QTableWidgetItem();
         sumItem->setData(Qt::DisplayRole, t.price * t.quantity);
-        historyTable->setItem(row, 4, sumItem);
+        historyTable->setItem(0, 4, sumItem);
 
-        historyTable->setItem(row, 5, new QTableWidgetItem(facade->getTraderName(t.buyerId)));
-        historyTable->setItem(row, 6, new QTableWidgetItem(facade->getTraderName(t.sellerId)));
+        historyTable->setItem(0, 5, new QTableWidgetItem(facade->getTraderName(t.buyerId)));
+        historyTable->setItem(0, 6, new QTableWidgetItem(facade->getTraderName(t.sellerId)));
     }
 
-    // Возвращаем сортировку
-    historyTable->setSortingEnabled(true);
+    // Возвращаем сортировку (если была включена)
+    // Важно: если отсортировать по цене, новые строки автоматически встанут на свои места после включения.
+    historyTable->setSortingEnabled(wasSortingEnabled);
 
-    // Применяем фильтр (если что-то введено)
-    onHistoryFilterChanged();
+    // Применяем фильтр
+    if (!historySearchEdit->text().isEmpty() || historyColumnCombo->currentIndex() > 0) {
+        onHistoryFilterChanged();
+    }
 }
 
 // --- ЛОГИКА ФИЛЬТРАЦИИ ---

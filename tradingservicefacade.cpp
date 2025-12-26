@@ -6,7 +6,6 @@ TradingServiceFacade::TradingServiceFacade() {}
 int TradingServiceFacade::placeOrder(int traderId, QString ticker, OrderType type, double price, int quantity) {
     Order o = OrderFactory::createOrder(traderId, ticker, type, price, quantity);
 
-    // ВАЖНО: Мы сохраняем результат (true/false)
     bool success = MatchingEngine::getInstance()->processNewOrder(o);
 
     if (success) {
@@ -16,7 +15,6 @@ int TradingServiceFacade::placeOrder(int traderId, QString ticker, OrderType typ
     }
 }
 
-// Реализация нового метода
 void TradingServiceFacade::addSharesToTrader(int traderId, QString ticker, int quantity, double avgPrice) {
     MatchingEngine::getInstance()->addSharesToTrader(traderId, ticker, quantity, avgPrice);
 }

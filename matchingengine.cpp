@@ -27,14 +27,12 @@ void MatchingEngine::addAsset(QString ticker, QString name, double startPrice) {
     assets.insert(ticker, a);
 }
 
-// НОВЫЙ МЕТОД: Добавляем акции трейдеру "из воздуха" (для инициализации)
 void MatchingEngine::addSharesToTrader(int traderId, QString ticker, int quantity, double avgPrice) {
     Trader* t = traders.value(traderId);
     if (!t) return;
 
     PortfolioItem& item = t->portfolio[ticker];
     item.assetTicker = ticker;
-    // Пересчет средней цены, если акции уже были (хотя при старте их обычно 0)
     double totalCost = item.averageBuyPrice * item.quantity + avgPrice * quantity;
     item.quantity += quantity;
     if (item.quantity > 0)
